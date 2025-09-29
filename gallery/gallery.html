@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XTJKT Gallery</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      background: #222;
+      color: #fff;
+      padding: 12px;
+      text-align: center;
+    }
+    #uploadForm {
+      padding: 10px;
+      background: #fafafa;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+    #uploadForm input {
+      margin: 5px;
+    }
+    #gallery {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 6px;
+      padding: 6px;
+      overflow-y: auto;
+    }
+    #gallery img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    #gallery img:hover {
+      transform: scale(1.05);
+    }
+    /* Modal fullscreen */
+    #modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.9);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    #modal img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 8px;
+    }
+    #modal span {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      font-size: 32px;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>🖼️ XTJKT Gallery</h2>
+  </header>
+
+  <form id="uploadForm">
+    <input type="text" id="uid" placeholder="Nama / UID" required>
+    <input type="file" id="photo" accept="image/*" required>
+    <button type="submit">Upload</button>
+  </form>
+
+  <div id="gallery"></div>
+
+  <!-- Fullscreen Modal -->
+  <div id="modal">
+    <span id="closeBtn">&times;</span>
+    <img id="modalImg">
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyD_6QsmOJcp2CHGpp33mUrCdkJQe807WXA",
+      authDomain: "global-db-bandengpresto.firebaseapp.com",
+      projectId: "global-db-bandengpresto",
+      storageBucket: "global-db-bandengpresto.firebasestorage.app",
+      messagingSenderId: "335046216591",
+      appId: "1:335046216591:web:af211ebd446693fc7559fa",
+      measurementId: "G-W5XH0C25RM"
+    };
+
+    // Init Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const form = document.getElementById("uploadForm");
+    const uidInput = document.getElementById("uid");
+    const photoInput = document.getElementById("photo");
+    const gallery = document.getElementById("gallery");
+
+    // Upload image as base64
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const file = photoInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64String = reader.result; // base64 biner image
+        await addDoc(collection(db, "XTJKT", "gallery", "images"), {
+          uid: uidInput.value,
+          photo: base64String,
+          tanggal: new Date()
+        });
+        form.reset();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Realtime gallery
+    const q = query(collection(db, "XTJKT", "gallery", "images"), orderBy("tanggal", "desc"));
+    onSnapshot(q, (snapshot) => {
+      gallery.innerHTML = "";
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const img = document.createElement("img");
+        img.src = data.photo;
+        img.alt = data.uid;
+        img.title = data.uid;
+        img.addEventListener("click", () => openModal(data.photo));
+        gallery.appendChild(img);
+      });
+    });
+
+    // Modal
+    const modal = document.getElementById("modal");
+    const modalImg = document.getElementById("modalImg");
+    const closeBtn = document.getElementById("closeBtn");
+
+    function openModal(src) {
+      modal.style.display = "flex";
+      modalImg.src = src;
+    }
+    closeBtn.onclick = () => modal.style.display = "none";
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.style.display = "none";
+    };
+  </script>
+</body>
+</html>
